@@ -8,7 +8,6 @@
   let animId = null, currentPresetName = '';
   let allPresets = {}, filteredNames = [];
   let fpsFrames = 0, fpsLast = performance.now();
-  let demoOscillator = null, demoGain = null;
   let sourceNode = null;
 
   const canvas    = document.getElementById('main-canvas');
@@ -51,7 +50,6 @@
   async function startMic() {
     await initAudio();
     if (sourceNode) sourceNode.disconnect();
-    stopDemo();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     sourceNode = audioCtx.createMediaStreamSource(stream);
     initVisualizer();
@@ -59,45 +57,9 @@
     setStatus('MIC LIVE');
   }
 
-  function startDemo() {
-    initAudio().then(() => {
-      if (sourceNode) sourceNode.disconnect();
-      stopDemo();
-      const freqs = [60, 120, 240, 480, 960, 1920];
-      demoGain = audioCtx.createGain();
-      demoGain.gain.value = 0.12;
-      freqs.forEach(f => {
-        const osc = audioCtx.createOscillator();
-        osc.frequency.value = f;
-        osc.type = f < 200 ? 'sawtooth' : 'sine';
-        const lfo = audioCtx.createOscillator();
-        const lfoGain = audioCtx.createGain();
-        lfo.frequency.value = 2 + Math.random() * 3;
-        lfoGain.gain.value = 0.3;
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc.frequency);
-        lfo.start();
-        osc.start();
-        osc.connect(demoGain);
-      });
-      sourceNode = demoGain;
-      initVisualizer();
-      rebuildAudioGraph();
-      setStatus('DEMO TONE');
-    });
-  }
-
-  function stopDemo() {
-    if (demoGain) {
-      try { demoGain.disconnect(); } catch(e){}
-      demoGain = null;
-    }
-  }
-
   async function loadFile(file) {
     await initAudio();
     if (sourceNode) sourceNode.disconnect();
-    stopDemo();
     const buf = await file.arrayBuffer();
     const decoded = await audioCtx.decodeAudioData(buf);
     const bufSrc = audioCtx.createBufferSource();
@@ -213,41 +175,11 @@
   }
 
   document.getElementById('btn-mic').onclick = startMic;
-  document.getElementById('btn-demo').onclick = startDemo;
   document.getElementById('start-mic-big').onclick = startMic;
-  document.getElementById('start-demo-big').onclick = startDemo;
+  document.getElementById('start-file-big').onclick = () => document.getElementById('file-input').click();
   document.getElementById('btn-file').onclick = () => document.getElementById('file-input').click();
   document.getElementById('file-input').onchange = e => {
     if (e.target.files[0]) loadFile(e.target.files[0]);
-  };
-  document.getElementById('btn-milk').onclick = () => document.getElementById('milk-input').click();
-  document.getElementById('milk-input').onchange = async e => {
-    const files = [...e.target.files];
-    if (!files.length) return;
-
-    for (const file of files) {
-      const text = await file.text();
-      const name = file.name.replace(/\.milk$/i, '');
-      try {
-        const preset = butterchurnPresetUtils.preparePreset(
-          butterchurnPresetUtils.convertPreset(text)
-        );
-        allPresets[name] = preset;
-      } catch(err) {
-        console.warn('Failed to parse preset:', name, err);
-      }
-    }
-
-    // Обновляем список с учётом текущего фильтра
-    const q = document.getElementById('preset-search').value.toLowerCase();
-    filteredNames = Object.keys(allPresets).sort().filter(n => n.toLowerCase().includes(q));
-    renderPresetList(filteredNames);
-
-    // Загружаем первый из добавленных
-    const firstName = files[0].name.replace(/\.milk$/i, '');
-    if (allPresets[firstName]) loadPreset(firstName, parseFloat(blendSlider.value));
-
-    e.target.value = ''; // сброс input для повторной загрузки тех же файлов
   };
 
 // ── Modulation controls ───────────────────────────────────────
@@ -301,7 +233,6 @@ function rebuildAudioGraph() {
 
   // Патчим все функции, которые меняют sourceNode, чтобы они перестраивали граф
   const _origStartMic  = startMic;
-  const _origStartDemo = startDemo;
   const _origLoadFile  = loadFile;
 
   // ── Preset parameter patch ────────────────────────────────────
