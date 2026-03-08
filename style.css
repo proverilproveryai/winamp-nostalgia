@@ -342,3 +342,17 @@
   #canvas-wrap:fullscreen #meters {
     display: none;
   }
+
+  #btn-restore-sidebar {
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    padding: 12px 6px;
+    z-index: 20;
+    border-left: none;
+    border-color: var(--accent);
+    color: var(--accent);
+  }

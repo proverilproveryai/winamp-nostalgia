@@ -339,4 +339,25 @@ function rebuildAudioGraph() {
 
   overlayR.textContent = wrap.clientWidth + '×' + wrap.clientHeight;
 
+  document.getElementById('btn-toggle-sidebar').onclick = () => {
+    const sidebar = document.getElementById('sidebar');
+    const app = document.getElementById('app');
+    sidebar.style.display = 'none';
+    app.style.gridTemplateColumns = '1fr';
+    setTimeout(() => { if (visualizer) resizeVisualizer(); }, 50);
+
+    const restore = document.createElement('button');
+    restore.className = 'btn';
+    restore.id = 'btn-restore-sidebar';
+    restore.textContent = '▶ PANEL';
+    document.body.appendChild(restore);
+    restore.onclick = () => {
+      sidebar.style.display = '';
+      app.style.gridTemplateColumns = '';
+      restore.remove();
+      if (visualizer) resizeVisualizer();
+    };
+
+    if (visualizer) resizeVisualizer();
+  };
 })();
